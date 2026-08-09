@@ -1,0 +1,107 @@
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.citizens (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  phone_number text,
+  nik text,
+  nama text,
+  is_bogor_resident boolean DEFAULT true,
+  kelurahan text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT citizens_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.reports (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  phone_number text,
+  category text,
+  description text,
+  location_text text,
+  latitude double precision,
+  longitude double precision,
+  media_url text,
+  status text DEFAULT 'DRAFT'::text,
+  updated_at timestamp with time zone,
+  CONSTRAINT reports_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.services (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  code text NOT NULL UNIQUE,
+  name text NOT NULL,
+  category text NOT NULL,
+  dinas_owner text NOT NULL,
+  description text,
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT services_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.report_categories (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  code text NOT NULL UNIQUE,
+  name text NOT NULL,
+  description text,
+  is_emergency boolean DEFAULT false,
+  require_photo boolean DEFAULT false,
+  require_location boolean DEFAULT true,
+  dinas_owner text,
+  is_active boolean DEFAULT true,
+  CONSTRAINT report_categories_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.report_examples (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  report_code text,
+  example text,
+  embedding USER-DEFINED,
+  CONSTRAINT report_examples_pkey PRIMARY KEY (id),
+  CONSTRAINT report_examples_report_code_fkey FOREIGN KEY (report_code) REFERENCES public.report_categories(code)
+);
+CREATE TABLE public.service_examples (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  service_code text NOT NULL,
+  example text NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  variant_code text,
+  CONSTRAINT service_examples_pkey PRIMARY KEY (id),
+  CONSTRAINT service_examples_variant_code_fkey FOREIGN KEY (variant_code) REFERENCES public.service_variants(code),
+  CONSTRAINT service_examples_service_code_fkey FOREIGN KEY (service_code) REFERENCES public.services(code)
+);
+CREATE TABLE public.service_requests (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  phone_number text NOT NULL,
+  service_code text NOT NULL,
+  status text DEFAULT 'WAITING_INPUT'::text,
+  answers jsonb DEFAULT '{}'::jsonb,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  variant_code text,
+  current_field text,
+  CONSTRAINT service_requests_pkey PRIMARY KEY (id),
+  CONSTRAINT service_requests_service_code_fkey FOREIGN KEY (service_code) REFERENCES public.services(code),
+  CONSTRAINT service_requests_variant_code_fkey FOREIGN KEY (variant_code) REFERENCES public.service_variants(code)
+);
+CREATE TABLE public.service_variants (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  service_code text NOT NULL,
+  code text NOT NULL UNIQUE,
+  name text NOT NULL,
+  description text,
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT service_variants_pkey PRIMARY KEY (id),
+  CONSTRAINT service_variants_service_code_fkey FOREIGN KEY (service_code) REFERENCES public.services(code)
+);
+CREATE TABLE public.service_required_fields (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  variant_code text NOT NULL,
+  field_name text NOT NULL,
+  field_type text NOT NULL,
+  option_group text,
+  is_required boolean NOT NULL DEFAULT true,
+  sort_order smallint NOT NULL,
+  helper_text text,
+  download_url text,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT service_required_fields_pkey PRIMARY KEY (id),
+  CONSTRAINT service_required_fields_variant_code_fkey FOREIGN KEY (variant_code) REFERENCES public.service_variants(code)
+);
