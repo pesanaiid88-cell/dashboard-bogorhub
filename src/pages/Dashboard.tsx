@@ -212,21 +212,28 @@ export function Dashboard() {
         .order("created_at", { ascending: false })
 
       if (reportsData && reportsData.length > 0) {
-        const formattedReports: ReportItem[] = reportsData.map((r: any) => ({
-          id: r.id,
-          phone_number: r.phone_number || "-",
-          nama: citizenMap.get(r.phone_number)?.nama || "Warga Bogor",
-          category: categoryMap.get(r.category) || r.category || "Umum",
-          description: r.description || "-",
-          location_text: r.location_text || "-",
-          latitude: r.latitude || null,
-          longitude: r.longitude || null,
-          media_url: r.media_url || null,
-          status: r.status || "SUBMITTED",
-          created_at: r.created_at
-            ? new Date(r.created_at).toLocaleString("id-ID")
-            : "-",
-        }))
+        const formattedReports: ReportItem[] = reportsData.map((r: any) => {
+          let finalMediaUrl = r.media_url || null;
+          if (finalMediaUrl && !finalMediaUrl.startsWith('http')) {
+            const cleanPath = finalMediaUrl.startsWith('/') ? finalMediaUrl.slice(1) : finalMediaUrl;
+            finalMediaUrl = `https://tbtnwzvzwdfrejohqptq.supabase.co/storage/v1/object/public/${cleanPath}`;
+          }
+          return {
+            id: r.id,
+            phone_number: r.phone_number || "-",
+            nama: citizenMap.get(r.phone_number)?.nama || "Warga Bogor",
+            category: categoryMap.get(r.category) || r.category || "Umum",
+            description: r.description || "-",
+            location_text: r.location_text || "-",
+            latitude: r.latitude || null,
+            longitude: r.longitude || null,
+            media_url: finalMediaUrl,
+            status: r.status || "SUBMITTED",
+            created_at: r.created_at
+              ? new Date(r.created_at).toLocaleString("id-ID")
+              : "-",
+          };
+        })
         setReports(formattedReports)
         setRlsWarning(false)
       } else {
@@ -441,6 +448,8 @@ export function Dashboard() {
 
   // --- REAL SUPABASE STATUS UPDATES ---
   const updateReportStatus = async (id: string, newStatus: string) => {
+    const report = reports.find((r) => r.id === id)
+
     setReports((prev) =>
       prev.map((item) => (item.id === id ? { ...item, status: newStatus } : item))
     )
@@ -458,6 +467,27 @@ export function Dashboard() {
         console.error("Supabase update error:", error.message)
       } else {
         fetchSupabaseData()
+        
+        // Trigger WhatsApp Webhook
+        if (report && report.phone_number && report.phone_number !== "-") {
+          let message = `Laporan kamu terkait ${report.category} di ${report.location_text} pada ${report.created_at} sedang diproses, terimakasih sudah melaporkan`
+          if (newStatus === "DONE" || newStatus === "RESOLVED") {
+            message = `Laporan kamu terkait ${report.category} di ${report.location_text} pada ${report.created_at} telah selesai dikerjakan, terimakasih sudah melaporkan`
+          } else if (newStatus === "REJECTED") {
+            message = `Laporan kamu terkait ${report.category} di ${report.location_text} pada ${report.created_at} telah ditolak, terimakasih sudah melaporkan`
+          }
+
+          fetch("https://w6duicp.n8n.bocindonesia.com/webhook-test/bogorhub-customer-whatsapp", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              phone_number: report.phone_number,
+              message: message,
+            }),
+          }).catch((err) => console.error("Webhook WhatsApp error:", err))
+        }
       }
     } catch (err) {
       console.error("Error updating report in Supabase:", err)
@@ -465,6 +495,8 @@ export function Dashboard() {
   }
 
   const updateRequestStatus = async (id: string, newStatus: string) => {
+    const request = requests.find((r) => r.id === id)
+
     setRequests((prev) =>
       prev.map((item) => (item.id === id ? { ...item, status: newStatus } : item))
     )
@@ -482,6 +514,29 @@ export function Dashboard() {
         console.error("Supabase update request error:", error.message)
       } else {
         fetchSupabaseData()
+
+        // Trigger WhatsApp Webhook
+        if (request && request.phone_number && request.phone_number !== "-") {
+          let message = `Pengajuan layanan kamu terkait ${request.service_name} pada ${request.created_at} sedang diproses, terimakasih.`
+          if (newStatus === "COMPLETED" || newStatus === "RESOLVED") {
+            message = `Pengajuan layanan kamu terkait ${request.service_name} pada ${request.created_at} telah selesai diproses, terimakasih.`
+          } else if (newStatus === "CANCELLED" || newStatus === "REJECTED") {
+            message = `Pengajuan layanan kamu terkait ${request.service_name} pada ${request.created_at} telah dibatalkan/ditolak, terimakasih.`
+          } else if (newStatus === "WAITING_INPUT") {
+            message = `Pengajuan layanan kamu terkait ${request.service_name} pada ${request.created_at} sedang menunggu input tambahan darimu, harap cek secara berkala.`
+          }
+
+          fetch("https://w6duicp.n8n.bocindonesia.com/webhook-test/bogorhub-customer-whatsapp", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              phone_number: request.phone_number,
+              message: message,
+            }),
+          }).catch((err) => console.error("Webhook WhatsApp error:", err))
+        }
       }
     } catch (err) {
       console.error("Error updating service request in Supabase:", err)
@@ -1449,22 +1504,30 @@ export function Dashboard() {
                             <Paperclip className="h-4 w-4 text-primary" />
                             <span>Lampiran Bukti Foto & Berkas Media Laporan (`media_url`)</span>
                           </span>
-                          <div className="relative rounded-lg overflow-hidden border border-border max-h-[220px] mb-2 bg-card">
-                            <img
-                              src={selectedReport.media_url || "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=800"}
-                              alt="Media Preview"
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                          <a
-                            href={selectedReport.media_url || "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=800"}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 font-bold text-primary hover:underline bg-primary/10 px-3 py-1.5 rounded text-xs"
-                          >
-                            <ExternalLink className="h-3.5 w-3.5" />
-                            <span>Buka / Unduh Lampiran File Original (HD)</span>
-                          </a>
+                          {selectedReport.media_url ? (
+                            <>
+                              <div className="relative rounded-lg overflow-hidden border border-border max-h-[220px] mb-2 bg-card">
+                                <img
+                                  src={selectedReport.media_url}
+                                  alt="Media Preview"
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                              <a
+                                href={selectedReport.media_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 font-bold text-primary hover:underline bg-primary/10 px-3 py-1.5 rounded text-xs"
+                              >
+                                <ExternalLink className="h-3.5 w-3.5" />
+                                <span>Buka / Unduh Lampiran File Original (HD)</span>
+                              </a>
+                            </>
+                          ) : (
+                            <div className="flex flex-col items-center justify-center p-6 border border-dashed border-border rounded-lg bg-card text-muted-foreground text-xs font-medium">
+                              Tidak ada lampiran gambar/media
+                            </div>
+                          )}
                         </div>
 
                         <div className="pt-2 border-t border-border flex items-center justify-between gap-2">
