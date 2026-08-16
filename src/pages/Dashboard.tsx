@@ -477,7 +477,7 @@ export function Dashboard() {
             message = `Laporan kamu terkait ${report.category} di ${report.location_text} pada ${report.created_at} telah ditolak, terimakasih sudah melaporkan`
           }
 
-          fetch("https://w6duicp.n8n.bocindonesia.com/webhook-test/bogorhub-customer-whatsapp", {
+          fetch("https://w6duicp.n8n.bocindonesia.com/webhook/bogorhub-customer-whatsapp", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -526,7 +526,7 @@ export function Dashboard() {
             message = `Pengajuan layanan kamu terkait ${request.service_name} pada ${request.created_at} sedang menunggu input tambahan darimu, harap cek secara berkala.`
           }
 
-          fetch("https://w6duicp.n8n.bocindonesia.com/webhook-test/bogorhub-customer-whatsapp", {
+          fetch("https://w6duicp.n8n.bocindonesia.com/webhook/bogorhub-customer-whatsapp", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
