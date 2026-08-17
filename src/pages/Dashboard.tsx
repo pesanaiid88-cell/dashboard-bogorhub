@@ -322,28 +322,6 @@ export function Dashboard() {
       }
 
       // 5. Fetch Real Service Requests
-      const ensureFileAnswers = (answersObj: any) => {
-        const obj = typeof answersObj === "object" && answersObj !== null ? { ...answersObj } : {}
-        const fileKeys = Object.keys(obj).filter(
-          (k) =>
-            k.toLowerCase().includes("file") ||
-            k.toLowerCase().includes("scan") ||
-            k.toLowerCase().includes("foto") ||
-            k.toLowerCase().includes("surat") ||
-            k.toLowerCase().includes("ktp") ||
-            k.toLowerCase().includes("kk") ||
-            String(obj[k]).startsWith("http")
-        )
-
-        if (fileKeys.length === 0) {
-          obj["Scan KTP Asli Pemohon"] = "https://tbtnwzvzwdfrejohqptq.supabase.co/storage/v1/object/public/documents/ktp_pemohon_327101.pdf"
-          obj["Scan Kartu Keluarga (KK)"] = "https://tbtnwzvzwdfrejohqptq.supabase.co/storage/v1/object/public/documents/kk_keluarga_327101.pdf"
-          obj["Surat Pengantar RT/RW"] = "https://tbtnwzvzwdfrejohqptq.supabase.co/storage/v1/object/public/documents/surat_pengantar_rtrw.pdf"
-        }
-
-        return obj
-      }
-
       const { data: requestsData } = await supabase
         .from("service_requests")
         .select("*")
@@ -352,7 +330,7 @@ export function Dashboard() {
       if (requestsData && requestsData.length > 0) {
         const formattedRequests: ServiceRequestItem[] = requestsData.map((r: any) => {
           const citizen = citizenMap.get(r.phone_number)
-          const answersObj = ensureFileAnswers(r.answers)
+          const answersObj = typeof r.answers === "object" && r.answers !== null ? { ...r.answers } : {}
           return {
             id: r.id,
             phone_number: r.phone_number || "-",
@@ -372,68 +350,7 @@ export function Dashboard() {
         })
         setRequests(formattedRequests)
       } else {
-        setRequests([
-          {
-            id: "sr-001-3271-2026",
-            phone_number: "6281310346094",
-            nama: "Prabowo Subianto",
-            nik: "3271012345670001",
-            service_code: "ADM_DISDUKCAPIL_01",
-            service_name: "Surat Keterangan Pindah (SKP)",
-            variant_code: "VAR_SKP_ANTAR_KOTA",
-            variant_name: "Pindah Antar Kota/Kabupaten",
-            status: "PROCESSING",
-            current_field: "Verifikasi Berkas KTP & KK oleh Operator Disdukcapil",
-            answers: {
-              "Nama Lengkap": "Prabowo Subianto",
-              "NIK Pemohon": "3271012345670001",
-              "Alamat Tujuan": "Jl. Pajajaran No. 88, Kel. Baranangsiang, Kec. Bogor Timur",
-              "Alasan Pindah": "Pekerjaan / Dinas Negara",
-              "File Scan KTP Asli": "https://tbtnwzvzwdfrejohqptq.supabase.co/storage/v1/object/public/documents/ktp_prabowo_327101.pdf",
-              "File Kartu Keluarga (KK)": "https://tbtnwzvzwdfrejohqptq.supabase.co/storage/v1/object/public/documents/kk_keluarga_327101.pdf",
-              "File Surat Pengantar RT/RW": "https://tbtnwzvzwdfrejohqptq.supabase.co/storage/v1/object/public/documents/surat_pengantar_rtrw.pdf"
-            },
-            created_at: "09/08/2026, 11:20:00"
-          },
-          {
-            id: "sr-002-3271-2026",
-            phone_number: "089876543210",
-            nama: "Siti Aminah",
-            nik: "3271029876540002",
-            service_code: "ADM_DISDUKCAPIL_02",
-            service_name: "Pencatatan Kelahiran",
-            variant_code: "VAR_AKTA_LAHIR_BARU",
-            variant_name: "Akta Kelahiran Bayi Baru Lahir",
-            status: "SUBMITTED",
-            current_field: "Menunggu Validasi Berkas Kelurahan",
-            answers: {
-              "Nama Bayi": "Muhammad Rizky",
-              "Tempat Lahir": "RSUD Kota Bogor",
-              "Tanggal Lahir": "01/08/2026",
-              "File Surat Keterangan Lahir RS": "https://tbtnwzvzwdfrejohqptq.supabase.co/storage/v1/object/public/documents/surat_lahir_rsud.pdf",
-              "File Buku Nikah Orang Tua": "https://tbtnwzvzwdfrejohqptq.supabase.co/storage/v1/object/public/documents/buku_nikah_ortu.pdf"
-            },
-            created_at: "08/08/2026, 09:15:00"
-          },
-          {
-            id: "sr-003-3271-2026",
-            phone_number: "081234567890",
-            nama: "Budi Santoso",
-            nik: "3271034567890003",
-            service_code: "ADM_DISDUKCAPIL_03",
-            service_name: "Kartu Identitas Anak (KIA)",
-            variant_code: "VAR_KIA_5_17_THN",
-            variant_name: "KIA Usia 5-17 Tahun",
-            status: "COMPLETED",
-            current_field: "Selesai Dicetak & Siap Diambil di Kecamatan",
-            answers: {
-              "Nama Anak": "Anisa Santoso",
-              "File Pas Foto 3x4 Anak": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400",
-              "File Akta Kelahiran": "https://tbtnwzvzwdfrejohqptq.supabase.co/storage/v1/object/public/documents/akta_kelahiran_anisa.pdf"
-            },
-            created_at: "07/08/2026, 14:00:00"
-          }
-        ])
+        setRequests([])
       }
     } catch (err) {
       console.error("Error fetching Supabase data:", err)
@@ -728,8 +645,17 @@ export function Dashboard() {
     }
   }
 
-  const renderAnswerValue = (value: any) => {
-    const valStr = String(value || "")
+  const renderValueItem = (val: any, index?: number, isAttachment: boolean = false) => {
+    let valStr = String(val || "")
+    
+    // Convert to Supabase storage URL if it's an attachment path and not already a full URL
+    if (isAttachment && valStr && !valStr.startsWith("http") && !valStr.startsWith("data:")) {
+      const baseUrl = import.meta.env.VITE_SUPABASE_URL || "https://tbtnwzvzwdfrejohqptq.supabase.co"
+      // Remove leading slash if any
+      const cleanPath = valStr.startsWith('/') ? valStr.slice(1) : valStr;
+      valStr = `${baseUrl}/storage/v1/object/public/${cleanPath}`
+    }
+
     const isUrl =
       valStr.startsWith("http://") ||
       valStr.startsWith("https://") ||
@@ -737,21 +663,62 @@ export function Dashboard() {
       valStr.includes("supabase.co/storage")
 
     if (isUrl) {
+      const isImage = /\\.(jpg|jpeg|png|webp|avif|gif)$/i.test(valStr) || valStr.startsWith("data:image/")
+      
       return (
-        <a
-          href={valStr}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 font-bold text-primary hover:underline bg-primary/10 px-2.5 py-1 rounded text-xs transition-colors hover:bg-primary/20"
-        >
-          <Paperclip className="h-3.5 w-3.5" />
-          <span>Buka / Unduh Berkas</span>
-          <ExternalLink className="h-3 w-3 ml-0.5" />
-        </a>
+        <div key={index} className="flex flex-col gap-2 mb-2 last:mb-0">
+          {isImage || valStr.includes("supabase.co/storage") ? (
+             <div className="relative rounded-md overflow-hidden border border-border max-w-full sm:max-w-[200px] bg-card">
+               <img
+                 src={valStr}
+                 alt="Preview"
+                 className="w-full h-auto object-cover max-h-[150px]"
+                 onError={(e) => {
+                   // Fallback if not an image
+                   (e.target as HTMLElement).style.display = 'none';
+                 }}
+               />
+             </div>
+          ) : null}
+          <a
+            href={valStr}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 font-bold text-primary hover:underline bg-primary/10 px-2.5 py-1 rounded text-xs transition-colors hover:bg-primary/20 w-fit"
+          >
+            <Paperclip className="h-3.5 w-3.5" />
+            <span>Buka / Unduh Berkas</span>
+            <ExternalLink className="h-3 w-3 ml-0.5" />
+          </a>
+        </div>
       )
     }
 
-    return <span className="font-medium text-foreground text-right break-all">{valStr}</span>
+    return <span key={index} className="font-medium text-foreground break-all mb-1 block last:mb-0">{valStr}</span>
+  }
+
+  const renderAnswerValue = (value: any, isAttachment: boolean = false) => {
+    let parsedValue = value;
+    if (typeof value === "string") {
+      try {
+        const parsed = JSON.parse(value);
+        if (Array.isArray(parsed) || typeof parsed === "object") {
+          parsedValue = parsed;
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    if (Array.isArray(parsedValue)) {
+      return (
+        <div className="flex flex-col text-right items-end">
+          {parsedValue.map((item, idx) => renderValueItem(item, idx, isAttachment))}
+        </div>
+      )
+    }
+
+    return <div className="text-right flex justify-end">{renderValueItem(parsedValue, undefined, isAttachment)}</div>
   }
 
   return (
@@ -1419,7 +1386,7 @@ export function Dashboard() {
 
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-2">
-                                {item.status !== "DONE" && item.status !== "RESOLVED" && (
+                                {(item.status === "IN_PROCESS" || item.status === "IN_PROGRESS") && (
                                   <Button
                                     size="sm"
                                     variant="outline"
@@ -1450,7 +1417,7 @@ export function Dashboard() {
 
               {/* Detail Modal */}
               <Dialog open={!!selectedReport} onOpenChange={() => setSelectedReport(null)}>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                   {selectedReport && (
                     <>
                       <DialogHeader>
@@ -1533,30 +1500,36 @@ export function Dashboard() {
                         <div className="pt-2 border-t border-border flex items-center justify-between gap-2">
                           <span className="font-bold text-xs">Ubah Status Laporan di Supabase:</span>
                           <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant={selectedReport.status === "IN_PROCESS" || selectedReport.status === "IN_PROGRESS" ? "default" : "outline"}
-                              className="text-xs h-8"
-                              onClick={() => updateReportStatus(selectedReport.id, "IN_PROCESS")}
-                            >
-                              Diproses
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant={selectedReport.status === "DONE" || selectedReport.status === "RESOLVED" ? "default" : "outline"}
-                              className="text-xs h-8 bg-emerald-600 hover:bg-emerald-700 text-white"
-                              onClick={() => updateReportStatus(selectedReport.id, "DONE")}
-                            >
-                              <Check className="h-3.5 w-3.5 mr-1" /> Selesai
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant={selectedReport.status === "REJECTED" ? "default" : "outline"}
-                              className="text-xs h-8 text-rose-400 border-rose-500/40 hover:bg-rose-500/20"
-                              onClick={() => updateReportStatus(selectedReport.id, "REJECTED")}
-                            >
-                              Ditolak
-                            </Button>
+                            {["SUBMITTED", "WAITING_INPUT"].includes(selectedReport.status) && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-xs h-8"
+                                onClick={() => updateReportStatus(selectedReport.id, "IN_PROCESS")}
+                              >
+                                Diproses
+                              </Button>
+                            )}
+                            {(selectedReport.status === "IN_PROCESS" || selectedReport.status === "IN_PROGRESS") && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-xs h-8 bg-emerald-600 hover:bg-emerald-700 text-white"
+                                onClick={() => updateReportStatus(selectedReport.id, "DONE")}
+                              >
+                                <Check className="h-3.5 w-3.5 mr-1" /> Selesai
+                              </Button>
+                            )}
+                            {["SUBMITTED", "IN_PROCESS", "IN_PROGRESS"].includes(selectedReport.status) && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-xs h-8 text-rose-400 border-rose-500/40 hover:bg-rose-500/20"
+                                onClick={() => updateReportStatus(selectedReport.id, "REJECTED")}
+                              >
+                                Ditolak
+                              </Button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1949,7 +1922,7 @@ export function Dashboard() {
 
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-2">
-                                {item.status !== "COMPLETED" && (
+                                {item.status === "PROCESSING" && (
                                   <Button
                                     size="sm"
                                     variant="outline"
@@ -1980,7 +1953,7 @@ export function Dashboard() {
 
               {/* Service Request Detail Modal */}
               <Dialog open={!!selectedRequest} onOpenChange={() => setSelectedRequest(null)}>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                   {selectedRequest && (
                     <>
                       <DialogHeader>
@@ -2027,43 +2000,6 @@ export function Dashboard() {
                           </div>
                         </div>
 
-                        {/* Dedicated File Attachments Section */}
-                        {(() => {
-                          const fileEntries = Object.entries(selectedRequest.answers).filter(([fKey, fVal]) => {
-                            const valStr = String(fVal || "")
-                            return (
-                              fKey.toLowerCase().includes("file") ||
-                              fKey.toLowerCase().includes("scan") ||
-                              fKey.toLowerCase().includes("foto") ||
-                              fKey.toLowerCase().includes("surat") ||
-                              valStr.startsWith("http://") ||
-                              valStr.startsWith("https://") ||
-                              valStr.includes("supabase.co/storage")
-                            )
-                          })
-
-                          if (fileEntries.length === 0) return null
-
-                          return (
-                            <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
-                              <span className="text-xs font-bold text-primary flex items-center gap-1.5 mb-2.5">
-                                <Paperclip className="h-4 w-4 text-primary" />
-                                <span>Berkas Dokumen Lampiran File Upload Warga ({fileEntries.length} Berkas)</span>
-                              </span>
-                              <div className="grid gap-2">
-                                {fileEntries.map(([fKey, fVal]) => (
-                                  <div key={fKey} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2 rounded bg-card border border-border">
-                                    <div className="font-medium text-xs text-foreground">
-                                      {fKey}
-                                    </div>
-                                    <div>{renderAnswerValue(fVal)}</div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )
-                        })()}
-
                         <div>
                           <span className="text-muted-foreground block text-[11px] font-bold uppercase tracking-wider mb-2">
                             Semua Data Isian Form Warga (`answers` JSONB)
@@ -2072,12 +2008,18 @@ export function Dashboard() {
                             {Object.keys(selectedRequest.answers).length === 0 ? (
                               <p className="text-muted-foreground text-xs italic">Belum ada jawaban formulir.</p>
                             ) : (
-                              Object.entries(selectedRequest.answers).map(([key, value]) => (
-                                <div key={key} className="flex justify-between border-b border-border/50 pb-1.5 last:border-0 last:pb-0 text-xs">
-                                  <span className="text-muted-foreground font-medium">{key}</span>
-                                  {renderAnswerValue(value)}
-                                </div>
-                              ))
+                              Object.entries(selectedRequest.answers).map(([key, value]) => {
+                                const isFile = key.toLowerCase().includes("file") ||
+                                              key.toLowerCase().includes("scan") ||
+                                              key.toLowerCase().includes("foto") ||
+                                              key.toLowerCase().includes("surat");
+                                return (
+                                  <div key={key} className="flex justify-between border-b border-border/50 pb-1.5 last:border-0 last:pb-0 text-xs">
+                                    <span className="text-muted-foreground font-medium">{key}</span>
+                                    {renderAnswerValue(value, isFile)}
+                                  </div>
+                                )
+                              })
                             )}
                           </div>
                         </div>
@@ -2085,30 +2027,36 @@ export function Dashboard() {
                         <div className="pt-2 border-t border-border flex items-center justify-between gap-2">
                           <span className="font-bold text-xs">Ubah Status di Supabase:</span>
                           <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant={selectedRequest.status === "PROCESSING" ? "default" : "outline"}
-                              className="text-xs h-8"
-                              onClick={() => updateRequestStatus(selectedRequest.id, "PROCESSING")}
-                            >
-                              Diproses
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant={selectedRequest.status === "COMPLETED" ? "default" : "outline"}
-                              className="text-xs h-8 bg-emerald-600 hover:bg-emerald-700 text-white"
-                              onClick={() => updateRequestStatus(selectedRequest.id, "COMPLETED")}
-                            >
-                              <Check className="h-3.5 w-3.5 mr-1" /> Selesai
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant={selectedRequest.status === "CANCELLED" ? "default" : "outline"}
-                              className="text-xs h-8 text-rose-400 border-rose-500/40 hover:bg-rose-500/20"
-                              onClick={() => updateRequestStatus(selectedRequest.id, "CANCELLED")}
-                            >
-                              Batalkan
-                            </Button>
+                            {["SUBMITTED", "WAITING_INPUT"].includes(selectedRequest.status) && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-xs h-8"
+                                onClick={() => updateRequestStatus(selectedRequest.id, "PROCESSING")}
+                              >
+                                Diproses
+                              </Button>
+                            )}
+                            {selectedRequest.status === "PROCESSING" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-xs h-8 bg-emerald-600 hover:bg-emerald-700 text-white"
+                                onClick={() => updateRequestStatus(selectedRequest.id, "COMPLETED")}
+                              >
+                                <Check className="h-3.5 w-3.5 mr-1" /> Selesai
+                              </Button>
+                            )}
+                            {["SUBMITTED", "PROCESSING", "IN_PROCESS"].includes(selectedRequest.status) && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-xs h-8 text-rose-400 border-rose-500/40 hover:bg-rose-500/20"
+                                onClick={() => updateRequestStatus(selectedRequest.id, "CANCELLED")}
+                              >
+                                Batalkan
+                              </Button>
+                            )}
                           </div>
                         </div>
                       </div>
