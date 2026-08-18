@@ -339,7 +339,7 @@ export function Dashboard() {
             service_code: r.service_code || "-",
             service_name: serviceMap.get(r.service_code) || r.service_code || "Layanan Publik",
             variant_code: r.variant_code || "-",
-            variant_name: r.variant_code || "Pengajuan",
+            variant_name: r.variant_name || r.variant_code || "Pengajuan",
             status: r.status || "SUBMITTED",
             current_field: r.current_field || "Verifikasi Berkas KTP & KK",
             answers: answersObj,
@@ -434,13 +434,14 @@ export function Dashboard() {
 
         // Trigger WhatsApp Webhook
         if (request && request.phone_number && request.phone_number !== "-") {
-          let message = `Pengajuan layanan kamu terkait ${request.service_name} pada ${request.created_at} sedang diproses, terimakasih.`
+          const detailLayanan = `${request.service_name} untuk ${request.variant_name} atas nama ${request.nama} yang dibuat tanggal ${request.created_at}`;
+          let message = `Pengajuan layanan kamu terkait ${detailLayanan} sedang diproses, terimakasih.`
           if (newStatus === "COMPLETED" || newStatus === "RESOLVED") {
-            message = `Pengajuan layanan kamu terkait ${request.service_name} pada ${request.created_at} telah selesai diproses, terimakasih.`
+            message = `Pengajuan layanan kamu terkait ${detailLayanan} telah selesai diproses, terimakasih.`
           } else if (newStatus === "CANCELLED" || newStatus === "REJECTED") {
-            message = `Pengajuan layanan kamu terkait ${request.service_name} pada ${request.created_at} telah dibatalkan/ditolak, terimakasih.`
+            message = `Pengajuan layanan kamu terkait ${detailLayanan} telah dibatalkan/ditolak, terimakasih.`
           } else if (newStatus === "WAITING_INPUT") {
-            message = `Pengajuan layanan kamu terkait ${request.service_name} pada ${request.created_at} sedang menunggu input tambahan darimu, harap cek secara berkala.`
+            message = `Pengajuan layanan kamu terkait ${detailLayanan} sedang menunggu input tambahan darimu, harap cek secara berkala.`
           }
 
           fetch("https://w6duicp.n8n.bocindonesia.com/webhook/bogorhub-customer-whatsapp", {
@@ -732,7 +733,6 @@ export function Dashboard() {
         <div className="flex h-full max-h-screen flex-col gap-2">
           <div className="flex h-14 items-center border-b px-4 lg:h-[60px]">
             <Link to="/" className="flex items-center gap-2 font-semibold">
-              <Activity className="h-6 w-6 shrink-0 text-primary" />
               {isSidebarOpen && <span className="truncate text-lg font-bold">BogorHub</span>}
             </Link>
             {isSidebarOpen && (
@@ -852,7 +852,7 @@ export function Dashboard() {
             <SheetContent side="left" className="flex flex-col bg-card">
               <nav className="grid gap-4 text-base font-medium">
                 <Link to="#" className="flex items-center gap-2 text-lg font-bold">
-                  <Activity className="h-6 w-6 text-primary" />
+                  <img src="/favicon.svg" alt="BogorHub Logo" className="h-8 w-8 shrink-0 object-contain rounded-full" />
                   <span>BogorHub</span>
                 </Link>
 
