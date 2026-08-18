@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom"
 import {
-  Activity,
   BarChart3,
   FileText,
   PieChart as PieChartIcon,
